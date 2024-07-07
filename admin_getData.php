@@ -18,9 +18,9 @@ try {
     $statement->execute();
     
     // 獲取所有結果
-    $productData = $statement->fetchAll(PDO::FETCH_ASSOC);
+    $adminData = $statement->fetchAll(PDO::FETCH_ASSOC);
     
-    $returnData['data']['list'] = $productData;
+    $returnData['data']['list'] = $adminData;
     $returnData['msg'] = 'Success';
 
 } catch (PDOException $e) {
