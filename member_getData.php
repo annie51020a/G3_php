@@ -1,7 +1,13 @@
 <?php
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST');
-header("Access-Control-Allow-Headers: X-Requested-With");
+header("Access-Control-Allow-Origin: https://tibamef2e.com");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, X-Requested-With, Authorization");
+
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    // Handle preflight requests
+    http_response_code(204);
+    exit(0);
+}
 
 try {
     require_once("./connect_cid101g3.php");
