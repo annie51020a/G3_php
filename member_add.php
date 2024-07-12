@@ -1,85 +1,112 @@
 <?php
 header('Content-Type: application/json');
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header("Access-Control-Allow-Headers: Content-Type, X-Requested-With");
 
-// 啟用錯誤報告
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// 設置響應頭為 JSON
-header('Content-Type: application/json');
-
-// 引入數據庫配置文件
-require_once("./connect_cid101g3.php");
+function generateUniqueTel($pdo) {
+    do {
+        // 生成一個隨機的 10 位數字
+        $tel = '1' . str_pad(mt_rand(0, 999999999), 9, '0', STR_PAD_LEFT);
+        
+        // 檢查該電話號碼是否已存在
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM member WHERE mem_tel = :tel");
+        $stmt->execute([':tel' => $tel]);
+        $count = $stmt->fetchColumn();
+    } while ($count > 0);
+    
+    return $tel;
+}
 
 try {
-    // 獲取 POST 資料並清理
-    $email = filter_var($_POST['email'] ?? '', FILTER_VALIDATE_EMAIL);
-    $password = $_POST['password'] ?? '';
-    $gender = filter_var($_POST['gender'] ?? '', FILTER_SANITIZE_STRING);
-    $birth = filter_var($_POST['birth'] ?? '', FILTER_SANITIZE_STRING);
+    require_once("./connect_cid101g3.php");
+    
+    $returnData = [
+        'code' => 200,
+        'msg' => '',
+        'data' => []
+    ];
+
+    // 處理 OPTIONS 請求
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        exit(0);
+    }
+
+    // 獲取 JSON 輸入
+    $json = file_get_contents('php://input');
+    $data = json_decode($json, true);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new Exception("Invalid JSON input");
+    }
+
+    // 獲取並驗證數據
+    $email = filter_var($data['email'] ?? '', FILTER_VALIDATE_EMAIL);
+    $password = $data['password'] ?? '';
+    $gender = filter_var($data['gender'] ?? '', FILTER_SANITIZE_STRING);
+    $birth = filter_var($data['birth'] ?? '', FILTER_SANITIZE_STRING);
 
     if (!$email || empty($password) || empty($gender) || empty($birth)) {
-        throw new Exception("所有必填字段都必須提供有效值");
+        throw new Exception("有東西沒填寫完喔");
     }
 
     // 密碼哈希
-    $password = password_hash($password, PASSWORD_BCRYPT);
+    // $password = password_hash($password, PASSWORD_BCRYPT);
 
     // 從電子郵件中提取 "@" 前的字串作為會員名稱
     $mem_name = substr($email, 0, strpos($email, '@'));
 
-    // 設置創建日期
-    $create_date = date('Y-m-d H:i:s');
-
     // 設置其他欄位的默認值
-    $mem_tel = '123456789';
-    $mem_pic = ''; // 可以設置一個默認的圖片路徑
+    $create_date = date('Y-m-d H:i:s');
+    $tel = generateUniqueTel($pdo);  // 請注意：這應該是一個有效的電話號碼
+    $mem_pic = '';
     $mem_addr = '';
     $mem_carrier = '';
     $mem_company = '';
-    $mem_status = 0; // 默認沒有優惠券
-    $mem_googleid = null;
+    $mem_status = 0;
+    // $mem_googleid = null;
     $mem_card = '';
     $mem_card_date = null;
 
     // 準備 SQL 語句
-    $sql = "INSERT INTO member (mem_name, mem_email, mem_psw, mem_tel, mem_gender, mem_birth, mem_create, mem_pic, mem_addr, mem_carrier, mem_company, mem_status, mem_googleid, mem_card, mem_card_date) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    // $sql = "INSERT INTO member (mem_name, mem_email, mem_psw, mem_tel, mem_gender, mem_birth, mem_create, mem_pic, mem_addr, mem_carrier, mem_company, mem_status, mem_googleid, mem_card, mem_card_date) 
+    //         VALUES (:mem_name, :email, :password, :mem_tel, :gender, :birth, :create_date, :mem_pic, :mem_addr, :mem_carrier, :mem_company, :mem_status, :mem_googleid, :mem_card, :mem_card_date)";
+        // 準備 SQL 語句
+    $sql = "INSERT INTO member (mem_name, mem_email, mem_psw, mem_tel, mem_gender, mem_birth, mem_create, mem_pic, mem_addr, mem_carrier, mem_company, mem_status, mem_card, mem_card_date) 
+    VALUES (:mem_name, :email, :password, :mem_tel, :gender, :birth, :create_date, :mem_pic, :mem_addr, :mem_carrier, :mem_company, :mem_status,  :mem_card, :mem_card_date)";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':mem_name' => $mem_name,
+        ':email' => $email,
+        ':password' => $password,
+        ':mem_tel' => $tel,
+        ':gender' => $gender,
+        ':birth' => $birth,
+        ':create_date' => $create_date,
+        ':mem_pic' => $mem_pic,
+        ':mem_addr' => $mem_addr,
+        ':mem_carrier' => $mem_carrier,
+        ':mem_company' => $mem_company,
+        ':mem_status' => $mem_status,
+        // ':mem_googleid' => $mem_googleid,
+        ':mem_card' => $mem_card,
+        ':mem_card_date' => $mem_card_date
+    ]);
 
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        throw new Exception("預處理語句準備失敗: " . $conn->error);
-    }
+    $returnData['msg'] = '註冊成功';
+    $returnData['data']['member'] = [
+        'mem_name' => $mem_name,
+        'mem_email' => $email,
+        'mem_gender' => $gender,
+        'mem_birth' => $birth
+    ];
 
-    $stmt->bind_param("sssssssssssisss", 
-        $mem_name, $email, $password, $mem_tel, $gender, $birth, $create_date,
-        $mem_pic, $mem_addr, $mem_carrier, $mem_company, $mem_status,
-        $mem_googleid, $mem_card, $mem_card_date
-    );
-
-    if (!$stmt->execute()) {
-        throw new Exception("執行查詢失敗: " . $stmt->error);
-    }
-
-    $response = ['code' => 200, 'msg' => '註冊成功'];
-
-    // 關閉語句和連接
-    $stmt->close();
-    $conn->close();
-
+} catch (PDOException $e) {
+    $returnData['code'] = 10003;
+    $returnData['msg'] = "Database error: " . $e->getMessage();
 } catch (Exception $e) {
-    $response = ['code' => 500, 'msg' => '發生錯誤: ' . $e->getMessage()];
-} finally {
-    // 清理任何意外輸出
-    $output = ob_get_clean();
-    if (!empty($output)) {
-        error_log("Unexpected output: " . $output);
-    }
-    
-    // 輸出 JSON 響應
-    echo json_encode($response);
+    $returnData['code'] = 10004;
+    $returnData['msg'] = "General error: " . $e->getMessage();
 }
-?>
+
+echo json_encode($returnData);
