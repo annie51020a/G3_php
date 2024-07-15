@@ -2,14 +2,14 @@
 	//--------------------開發階段
 	header("Access-Control-Allow-Origin:*");	
 	//---
-	$dbname = "cid101_g3";
-	$user = "root";
-	$password = "";
+	// $dbname = "cid101_g3";
+	// $user = "root";
+	// $password = "";
 
 	//--------------------prod階段
-	// $dbname = "tibamefe_cid101g3";
-	// $user = "tibamefe_since2021";
-	// $password = "vwRBSb.j&K#E";
+	$dbname = "tibamefe_cid101g3";
+	$user = "tibamefe_since2021";
+	$password = "vwRBSb.j&K#E";
 
 	$dsn = "mysql:host=localhost;port=3306;dbname=$dbname;charset=utf8";
 
