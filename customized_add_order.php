@@ -19,19 +19,6 @@ function logError($message) {
 }
 
 try {
-
-    // // 檢查主鍵列是否已設置為自增
-    // $checkAutoIncrementQuery = "SELECT EXTRA FROM INFORMATION_SCHEMA.COLUMNS 
-    //                             WHERE TABLE_NAME = 'customized_orders' AND COLUMN_NAME = 'id'";
-    // $stmt = $pdo->query($checkAutoIncrementQuery);
-    // $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    // if (strpos($row['EXTRA'], 'auto_increment') === false) {
-    //     // 如果主鍵列沒有設置為自增，則修改表結構
-    //     $alterTableQuery = "ALTER TABLE customized_orders MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT";
-    //     $pdo->exec($alterTableQuery);
-    //     logError("Table structure updated to set id as AUTO_INCREMENT");
-    // }
-
     // 開始事務
     $pdo->beginTransaction();
 
@@ -48,18 +35,25 @@ try {
         isset($data["receiver_name"]) && isset($data["receiver_tel"]) && isset($data["receiver_address"]) &&
         isset($data["prefer_time"])
     ) {
+        // 查找表中現有的最大 customized_order_id 值
+        $maxIdQuery = "SELECT MAX(customized_order_id) AS max_id FROM customized_orders";
+        $stmt = $pdo->query($maxIdQuery);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $newId = $row['max_id'] + 1;
+
         $sql = "INSERT INTO customized_orders (
-            mem_id, ord_name, ord_tel, ord_mail, ord_date, customized_pic, ord_sum, promo_state, 
+            customized_order_id, mem_id, ord_name, ord_tel, ord_mail, ord_date, customized_pic, ord_sum, promo_state, 
             ord_pay, cus_order_state, ord_note, receiver_name, receiver_tel, receiver_address, 
             receiver_mail, prefer_time, invoice_num, uniform_num
         ) VALUES (
-            :mem_id, :ord_name, :ord_tel, :ord_mail, :ord_date, :customized_pic, :ord_sum, :promo_state, 
+            :customized_order_id, :mem_id, :ord_name, :ord_tel, :ord_mail, :ord_date, :customized_pic, :ord_sum, :promo_state, 
             :ord_pay, :cus_order_state, :ord_note, :receiver_name, :receiver_tel, :receiver_address, 
             :receiver_mail, :prefer_time, :invoice_num, :uniform_num
         )";
         
         $stmt = $pdo->prepare($sql);
         
+        $stmt->bindValue(":customized_order_id", $newId, PDO::PARAM_INT);
         $stmt->bindValue(":mem_id", $data["mem_id"], PDO::PARAM_INT);
         $stmt->bindValue(":ord_name", $data["ord_name"], PDO::PARAM_STR);
         $stmt->bindValue(":ord_tel", $data["ord_tel"], PDO::PARAM_STR);

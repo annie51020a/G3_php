@@ -43,8 +43,8 @@ try {
     // 獲取並驗證數據
     $email = filter_var($data['email'] ?? '', FILTER_VALIDATE_EMAIL);
     $password = $data['password'] ?? '';
-    $gender = filter_var($data['gender'] ?? '', FILTER_SANITIZE_STRING);
-    $birth = filter_var($data['birth'] ?? '', FILTER_SANITIZE_STRING);
+    $gender = filter_var($data['gender'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS);
+    $birth = filter_var($data['birth'] ?? '', FILTER_SANITIZE_SPECIAL_CHARS);
 
     if (!$email || empty($password) || empty($gender) || empty($birth)) {
         throw new Exception("有東西沒填寫完喔");
